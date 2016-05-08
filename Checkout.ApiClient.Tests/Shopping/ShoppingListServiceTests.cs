@@ -72,14 +72,13 @@ namespace Tests.Shopping
                 shoppingListService.AddShoppingListItem(new ShoppingListItemAdd { Name = "Item " + i, Quantity = 1 });
             }
 
-            var response = shoppingListService.GetShoppingList(2, 5);
-
+            var response = shoppingListService.GetShoppingList(1, 20);
             response.HttpStatusCode.Should().Be(HttpStatusCode.OK);
             response.Model.Should().NotBeNull();
             response.Model.TotalCount.Should().Be(10);
-            response.Model.CurrentPageCount.Should().Be(5);
-            response.Model.Items.Count().Should().Be(5);
-            response.Model.Items.First().Name.Should().Be("Item 6");
+            response.Model.CurrentPageCount.Should().Be(10);
+            response.Model.Items.Count().Should().Be(10);
+            response.Model.Items.First().Name.Should().Be("Item 1");
         }
 
         [Test]
@@ -90,13 +89,14 @@ namespace Tests.Shopping
                 shoppingListService.AddShoppingListItem(new ShoppingListItemAdd { Name = "Item " + i, Quantity = 1 });
             }
 
-            var response = shoppingListService.GetShoppingList(1, 20);
+            var response = shoppingListService.GetShoppingList(2, 5);
+
             response.HttpStatusCode.Should().Be(HttpStatusCode.OK);
             response.Model.Should().NotBeNull();
             response.Model.TotalCount.Should().Be(10);
-            response.Model.CurrentPageCount.Should().Be(10);
-            response.Model.Items.Count().Should().Be(10);
-            response.Model.Items.First().Name.Should().Be("Item 1");
+            response.Model.CurrentPageCount.Should().Be(5);
+            response.Model.Items.Count().Should().Be(5);
+            response.Model.Items.First().Name.Should().Be("Item 6");
         }
 
         [Test]
