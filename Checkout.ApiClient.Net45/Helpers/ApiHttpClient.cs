@@ -141,6 +141,25 @@ namespace Checkout
             return SendRequest<T>(httpRequestMsg).Result;
         }
 
+        public HttpResponse PutRequest(string requestUri, string authenticationKey, object requestPayload = null)
+        {
+            var httpRequestMsg = new HttpRequestMessage(HttpMethod.Put, requestUri);
+            var requestPayloadAsString = GetObjectAsString(requestPayload);
+
+            httpRequestMsg.Content = new StringContent(requestPayloadAsString, Encoding.UTF8, AppSettings.DefaultContentType);
+            httpRequestMsg.Headers.Add("Accept", AppSettings.DefaultContentType);
+
+            SetHttpRequestHeader("Authorization", authenticationKey);
+
+            if (AppSettings.DebugMode)
+            {
+                Console.WriteLine(string.Format("\n\n** Request ** Put {0}", requestUri));
+                Console.WriteLine(string.Format("\n\n** Payload ** \n {0} \n", requestPayloadAsString));
+            }
+
+            return SendRequest(httpRequestMsg).Result;
+        }
+
         /// <summary>
         /// Submits a delete request to the given web address
         /// </summary>
@@ -160,6 +179,24 @@ namespace Checkout
             }
 
             return SendRequest<T>(httpRequestMsg).Result; 
+        }
+
+        public HttpResponse DeleteRequest(string requestUri, string authenticationKey)
+        {
+            var httpRequestMsg = new HttpRequestMessage();
+
+            httpRequestMsg.Method = HttpMethod.Delete;
+            httpRequestMsg.RequestUri = new Uri(requestUri);
+            httpRequestMsg.Headers.Add("Accept", AppSettings.DefaultContentType);
+
+            SetHttpRequestHeader("Authorization", authenticationKey);
+
+            if (AppSettings.DebugMode)
+            {
+                Console.WriteLine(string.Format("\n\n** Request ** Delete {0}", requestUri));
+            }
+
+            return SendRequest(httpRequestMsg).Result;
         }
 
         /// <summary>
@@ -215,9 +252,44 @@ namespace Checkout
             return response;
         }
 
+        private async Task<HttpResponse> SendRequest(HttpRequestMessage request)
+        {
+            HttpResponse response = null;
+            HttpResponseMessage responseMessage = null;
+            string responseAsString = null;
+            string responseCode = null;
+
+            try
+            {
+                responseMessage = await httpClient.SendAsync(request);
+                responseCode = responseMessage.StatusCode.ToString();
+                response = new HttpResponse { HttpStatusCode = responseMessage.StatusCode };
+            }
+            catch (Exception ex)
+            {
+                if (AppSettings.DebugMode)
+                {
+                    Console.WriteLine(string.Format(@"\n** Exception - HttpStatuscode:\n{0}**\n\n 
+                        ** ResponseString {1}\n ** Exception Messages{2}\n ", (responseMessage != null ? responseMessage.StatusCode.ToString() : string.Empty), responseAsString, ExceptionHelper.FlattenExceptionMessages(ex)));
+                }
+
+                responseCode = "Exception" + ex.Message;
+
+                throw;
+            }
+            finally
+            {
+                request.Dispose();
+                ResetHandler();
+            }
+
+            return response;
+        }
+
+
         private HttpResponse<T> CreateHttpResponse<T>(string responseAsString, HttpStatusCode httpStatusCode)
         {
-            if (httpStatusCode == HttpStatusCode.OK && responseAsString != null)
+            if (IsSuccessfulStatusCode(httpStatusCode) && responseAsString != null)
             {
                 return new HttpResponse<T>(GetResponseAsObject<T>(responseAsString))
                 {
@@ -246,5 +318,9 @@ namespace Checkout
             return ContentAdaptor.JsonStringToObject<T>(responseAsString);
         }
 
+        private bool IsSuccessfulStatusCode(HttpStatusCode statusCode)
+        {
+            return ((int)statusCode >= 200) && ((int)statusCode <= 299);
+        }
     }
 }
